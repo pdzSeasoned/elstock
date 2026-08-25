@@ -1,0 +1,63 @@
+<style>
+/* Customers Screen Styles */
+.customers-list {
+  padding: 15px;
+}
+
+.customer-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.customer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.customer-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+}
+
+.customer-meta {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #666;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.badge.archived {
+  background: #9E9E9E;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+.hidden {
+  display: none !important;
+}
+</style>

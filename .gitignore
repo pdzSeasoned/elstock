@@ -1,0 +1,28 @@
+# === KÄNSLIG DATA ===
+.env
+.env.*
+*.env
+backend/config.js
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/uploads/
+backend/data/
+data-backup-*/
+frontend-backup-*/
+
+# === BACKUP & TEMP ===
+backup.sh
+fix.sh
+*.backup
+
+# === NODE ===
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# === SYSTEM ===
+.DS_Store
+Thumbs.db

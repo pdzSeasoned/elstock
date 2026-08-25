@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ElStock">
+<meta name="theme-color" content="#0d0d14">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="manifest" href="/manifest.json">
+<title>ElStock</title>
+<link rel="stylesheet" href="/css/themes.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/leaflet.css">
+</head>
+<body>
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+<div id="app">
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen active">
+    <div class="login-wrap">
+      <div class="login-logo">
+        <div class="logo-bolt">⚡</div>
+        <h1>El<span>Stock</span></h1>
+        <p>Bil-lager för elektriker</p>
+      </div>
+      <div class="card">
+        <div class="field"><label>Användarnamn</label><input type="text" id="login-username" autocomplete="username" placeholder="ditt.namn"></div>
+        <div class="field"><label>Lösenord</label><input type="password" id="login-password" autocomplete="current-password" placeholder="••••••"></div>
+        <button class="btn btn-primary btn-full" onclick="login()">Logga in</button>
+        <div id="login-error" class="error-msg hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="screen-app" class="screen hidden">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="logo">El<span class="accent">Stock</span></span>
+        <div class="warehouse-selector" onclick="toggleWarehousePicker()">
+          <span id="active-warehouse-name">Välj lager</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="icon-btn" onclick="showScreen('notifications')" id="notif-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="badge hidden" id="notif-badge">0</span>
+        </div>
+        <div class="icon-btn" onclick="showScreen('cart')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          <span class="badge hidden" id="cart-badge">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warehouse picker -->
+    <div id="warehouse-picker" class="warehouse-picker hidden">
+      <div id="warehouse-list"></div>
+      <button class="btn btn-ghost btn-sm admin-only" onclick="showScreen('warehouses')">+ Hantera lager</button>
+    </div>
+
+    <!-- Bottom nav -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" data-screen="inventory" onclick="showScreen('inventory')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span>Lager</span>
+      </div>
+      <div class="nav-item" data-screen="catalog" onclick="showScreen('catalog')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Produkter</span>
+      </div>
+      <div class="nav-item" data-screen="cart" onclick="showScreen('cart')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <span>Varukorg</span>
+      </div>
+      <div class="nav-item" data-screen="restock" onclick="showScreen('restock')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+        <span>Fyll på</span>
+      </div>
+      <div class="nav-item" data-screen="history" onclick="showScreen('history')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Kvitton</span>
+      </div>
+      <div class="nav-item" data-screen="customers" onclick="showScreen('customers')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Kunder</span>
+      </div>
+      <div class="nav-item" data-screen="jobs" onclick="showScreen('jobs')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        <span>Jobb</span>
+      </div>
+      <div class="nav-item" data-screen="calendar" onclick="showScreen('calendar')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Kalender</span>
+      </div>
+      <div class="nav-item" data-screen="equipment" onclick="showScreen('equipment')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span>Utrustning</span>
+      </div>
+      <div class="nav-item" data-screen="trips" onclick="showScreen('trips')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6l9-3 9 3M3 18l9 3 9-3"/></svg>
+        <span>Färdlogg</span>
+      </div>
+      <div class="nav-item" data-screen="settings" onclick="showScreen('settings')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Inställningar</span>
+      </div>
+    </nav>
+
+    <!-- INVENTORY -->
+    <div id="screen-inventory" class="page-screen">
+      <div class="page-header">
+        <h2>Lagersaldo</h2>
+        <div class="header-actions">
+          <button class="btn btn-sm btn-ghost" onclick="openScanModal('inventory-scan')">📷 Skanna</button>
+          <button class="btn btn-sm btn-accent admin-only" onclick="showAddProductToWarehouse()">+ Lägg till</button>
+        </div>
+      </div>
+      <div class="search-bar"><input type="search" id="inventory-search" placeholder="Sök artikel eller E-nummer..." oninput="filterInventory(this.value)"></div>
+      <div class="filter-row" id="category-filters"></div>
+      <div id="inventory-list" class="item-list"></div>
+      <div id="low-stock-banner" class="low-stock-banner hidden">
+        <span>⚠️ <span id="low-stock-count">0</span> artiklar håller på att ta slut</span>
+        <button onclick="showScreen('notifications')" class="btn btn-xs btn-warn">Visa</button>
+      </div>
+    </div>
+
+    <!-- CATALOG -->
+    <div id="screen-catalog" class="page-screen hidden">
+      <div id="catalog-view-categories">
+        <div class="page-header">
+          <h2>Produktkatalog</h2>
+          <button class="btn btn-sm btn-accent admin-only" onclick="showEditProductModal(null)">+ Ny produkt</button>
+        </div>
+        <div class="search-bar"><input type="search" id="catalog-search-global" placeholder="Sök i alla produkter..." oninput="globalProductSearch(this.value)"></div>
+        <div id="catalog-global-results" style="display:none"><div id="catalog-global-grid" class="catalog-grid"></div></div>
+        <div id="catalog-category-grid" class="category-grid"></div>
+      </div>
+      <div id="catalog-view-products" style="display:none">
+        <button class="back-btn" onclick="showCatalogCategories()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Tillbaka
+        </button>
+        <div class="page-header">
+          <h2 id="catalog-category-title">Kategori</h2>
+          <button class="btn btn-sm btn-accent admin-only" onclick="showEditProductModal(null)">+ Ny</button>
+        </div>
+        <div class="filter-chips" id="catalog-brand-filters" style="margin-bottom:10px"></div>
+        <div class="filter-bar" id="catalog-attr-filters"></div>
+        <div id="catalog-product-grid" class="catalog-grid"></div>
+      </div>
+    </div>
+
+    <!-- CART -->
+    <div id="screen-cart" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Varukorg</h2>
+        <div class="header-actions">
+          <button class="btn btn-sm btn-ghost" onclick="openScanModal('cart-scan')">📷 Skanna</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearCart()">Rensa</button>
+        </div>
+      </div>
+      <div id="cart-list" class="item-list"></div>
+      <div id="cart-empty" class="empty-state">
+        <div class="empty-icon">🛒</div>
+        <p>Varukorgen är tom</p>
+        <p class="muted">Skanna eller sök efter artiklar</p>
+        <button class="btn btn-accent" onclick="openProductSearch('cart')">Sök artikel</button>
+      </div>
+      <div id="cart-footer" class="cart-footer hidden">
+        <div class="cart-summary"><span id="cart-item-count">0 artiklar</span></div>
+        <button class="btn btn-primary btn-full" onclick="showCheckout()">Slutför uttag →</button>
+      </div>
+    </div>
+
+    <!-- RESTOCK -->
+    <div id="screen-restock" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Fyll på lager</h2>
+        <div class="header-actions"><button class="btn btn-sm btn-ghost" onclick="openScanModal('restock-scan')">📷 Skanna</button></div>
+      </div>
+      <p class="screen-subtitle">Registrera påfyllning från centralförrådet</p>
+      <div id="restock-list" class="item-list"></div>
+      <div id="restock-empty" class="empty-state">
+        <div class="empty-icon">📦</div>
+        <p>Inga artiklar tillagda</p>
+        <button class="btn btn-accent" onclick="openProductSearch('restock')">+ Lägg till artikel</button>
+      </div>
+      <div id="restock-footer" class="cart-footer hidden">
+        <button class="btn btn-primary btn-full" onclick="confirmRestock()">Bekräfta påfyllning</button>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="screen-history" class="page-screen hidden">
+      <div class="page-header"><h2>Kvitton &amp; historik</h2></div>
+      <div class="filter-tabs" id="history-filter-tabs">
+        <button class="tab active" onclick="loadHistory('checkout',this)">Uttag</button>
+        <button class="tab" onclick="loadHistory('restock',this)">Påfyllning</button>
+      </div>
+      <div id="history-list" class="item-list"></div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="screen-notifications" class="page-screen hidden">
+      <div class="page-header"><h2>Larm &amp; notiser</h2></div>
+      <div id="notifications-list"></div>
+    </div>
+
+    <!-- WAREHOUSES -->
+    <div id="screen-warehouses" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Mina lager</h2>
+        <button class="btn btn-sm btn-accent admin-only" onclick="showAddWarehouse()">+ Nytt lager</button>
+      </div>
+      <div id="warehouses-list" class="item-list"></div>
+    </div>
+
+    <!-- USERS -->
+    <div id="screen-users" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Användare</h2>
+        <button class="btn btn-sm btn-accent" onclick="showAddUser()">+ Ny användare</button>
+      </div>
+      <div id="users-list"></div>
+    </div>
+
+    <!-- CALENDAR SCREEN -->
+    <div id="screen-calendar" class="page-screen hidden">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+          <div id="cal-title" class="cal-title">Kalender</div>
+          <button class="cal-nav-btn" onclick="calNext()">›</button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-xs btn-ghost" onclick="calToday()">Idag</button>
+          <div class="cal-view-toggle">
+            <button class="cal-view-btn active" data-view="month" onclick="switchCalView('month')">Månad</button>
+            <button class="cal-view-btn" data-view="week" onclick="switchCalView('week')">Vecka</button>
+          </div>
+        </div>
+      </div>
+      <div id="cal-body"></div>
+      <div id="cal-day-events" class="cal-day-events"></div>
+    </div>
+
+    <!-- CUSTOMERS SCREEN -->
+    <div id="screen-customers" class="page-screen hidden">
+      <div id="customers-list-view">
+        <div class="page-header">
+          <h2>Kunder</h2>
+          <button class="btn btn-sm btn-accent" onclick="showNewCustomerModal()">+ Ny kund</button>
+        </div>
+        <div class="search-bar">
+          <input type="search" id="customers-search" placeholder="Sök namn, kundnummer, telefon..." oninput="searchCustomers(this.value)">
+        </div>
+        <div id="customers-list" class="item-list"></div>
+      </div>
+      <div id="customers-detail-view" style="display:none">
+        <button class="back-btn" onclick="navigateUp()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Tillbaka
+        </button>
+        <div id="customer-detail-header" class="job-detail-header"></div>
+        <div class="settings-label">JOBB</div>
+        <div id="customer-jobs-list"></div>
+      </div>
+    </div>
+
+    <!-- JOBS SCREEN -->
+    <div id="screen-jobs" class="page-screen hidden">
+      <div id="jobs-list-view">
+        <div class="page-header">
+          <h2>Kunder &amp; Jobb</h2>
+          <button class="btn btn-sm btn-accent" onclick="showNewJobModal()">+ Nytt jobb</button>
+        </div>
+        <div class="search-bar">
+          <input type="search" id="jobs-search" placeholder="Sök kund, adress, AO-nummer..." oninput="searchJobs(this.value)">
+        </div>
+        <div class="filter-tabs" style="margin-bottom:14px">
+          <button id="jobs-tab-active" class="tab active" onclick="loadJobs('active')">Aktiva jobb</button>
+          <button id="jobs-tab-archived" class="tab" onclick="loadJobs('archived')">Arkiverade</button>
+        </div>
+        <div id="jobs-list" class="item-list"></div>
+      </div>
+      <div id="jobs-detail-view" style="display:none">
+        <button class="back-btn" onclick="closeJobDetail()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Tillbaka
+        </button>
+        <div id="job-detail-header" class="job-detail-header"></div>
+        <div class="entry-toolbar">
+          <button class="btn btn-ghost btn-sm" onclick="showAddNoteModal()">📝 Anteckning</button>
+          <button class="btn btn-ghost btn-sm" onclick="showAddPhotoModal()">📷 Foto</button>
+          <button class="btn btn-ghost btn-sm" onclick="showAddMaterialModal()">📦 Material</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <button class="btn btn-sm btn-ghost" style="flex:1" onclick="showPhotoGallery()">🖼️ Visa alla foton</button>
+          <button class="btn btn-sm btn-ghost" style="flex:1" onclick="showNotesView()">📋 Visa alla anteckningar</button>
+        </div>
+        <input type="file" id="job-photo-input" accept="image/*" multiple style="display:none" onchange="handleJobPhoto(this)">
+        <div class="settings-label">TIDSLINJE</div>
+        <div id="job-timeline" style="margin-bottom:20px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div class="settings-label" style="margin:0">BOKADE TIDER</div>
+          <button class="btn btn-xs btn-accent" onclick="showAddBookingModal()">+ Lägg till tid</button>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+          <div id="job-bookings"></div>
+        </div>
+        <div class="settings-label">MATERIAL SOM ANVÄNTS</div>
+        <div class="card" style="margin-bottom:20px">
+          <div id="job-materials"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERMISSIONS SCREEN -->
+    <div id="screen-permissions" class="page-screen hidden">
+      <div class="page-header"><h2>Behörigheter</h2></div>
+      <div id="permissions-content"></div>
+    </div>
+
+    <!-- CATEGORY MANAGER -->
+    <div id="screen-categories" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Kategorier &amp; Filter</h2>
+        <button class="btn btn-sm btn-accent" onclick="showAddCategory()">+ Ny kategori</button>
+      </div>
+      <div class="settings-label">KATEGORIER</div>
+      <div id="category-admin-list" class="item-list" style="margin-bottom:20px"></div>
+      <div class="settings-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>MÄRKEN</span>
+        <button class="btn btn-xs btn-accent" onclick="showAddBrand()">+ Lägg till</button>
+      </div>
+      <div class="card">
+        <div id="brand-admin-list"></div>
+      </div>
+    </div>
+
+    <!-- EQUIPMENT SCREEN -->
+    <div id="screen-equipment" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Utrustning</h2>
+        <button class="btn btn-sm btn-accent admin-only" onclick="showAddEquipment()">+ Lägg till</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">🔧 UTRUSTNING</div>
+        <div id="equipment-user-list">
+          <div class="empty-state"><p>Laddar...</p></div>
+        </div>
+      </div>
+
+      <div class="settings-section admin-only">
+        <div class="settings-label">⚙️ HANTERA UTRUSTNING</div>
+        <div id="equipment-admin-list">
+          <div class="empty-state"><p>Laddar...</p></div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-label">📍 UTRUSTNING PÅ KARTA</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div id="equipment-map" style="height:350px;border-radius:var(--radius)"></div>
+          <div style="padding:10px">
+            <button class="btn btn-ghost btn-sm btn-full" onclick="loadEquipmentMap()">🔄 Uppdatera</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="screen-settings" class="page-screen hidden">
+      <div class="page-header"><h2>Inställningar</h2></div>
+      <div class="settings-section">
+        <div class="settings-label">INLOGGAD SOM</div>
+        <div class="card settings-card">
+          <div class="settings-row"><span id="settings-username" class="settings-value"></span></div>
+          <button class="btn btn-ghost btn-sm" onclick="showChangePassword()">Ändra lösenord</button>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">Logga ut</button>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">ANVÄNDARE &amp; BEHÖRIGHETER</div>
+        <div class="card settings-card">
+          <button class="btn btn-ghost btn-sm" onclick="showScreen('users')">Hantera användare</button>
+          <button class="btn btn-ghost btn-sm" onclick="showScreen('permissions')">Behörigheter &amp; notiser per användare</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">MIN PROFIL &amp; NOTISER</div>
+        <div class="card settings-card">
+          <div class="field"><label>Telegram Chat ID</label><input type="text" id="my-telegram-id" placeholder="123456789"></div>
+          <div class="field"><label>Telegram användarnamn (visningsnamn)</label><input type="text" id="my-telegram-user" placeholder="@ditt_namn"></div>
+          <div class="settings-row"><span>Notis vid lågt lager</span><input type="checkbox" id="my-notify-low" checked></div>
+          <div class="settings-row"><span>Push-notiser aktiva</span><input type="checkbox" id="my-push-enabled" checked></div>
+          <div class="field"><label>Min färg (visas i kalender etc)</label><input type="color" id="my-color" value="#f5a623" style="width:60px;height:36px;border:none;background:none;cursor:pointer"></div>
+          <button class="btn btn-primary btn-sm" onclick="saveMyProfileSettings()">Spara profil</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">UTSEENDE</div>
+        <div class="card">
+          <div class="settings-card">
+            <div class="field" style="margin-bottom:0;">
+              <label>Tema</label>
+              <div class="theme-options" style="display:flex;gap:10px;margin-top:8px;">
+                <button type="button" class="theme-btn" data-theme="light" onclick="setTheme('light')" style="flex:1;padding:12px;border-radius:10px;border:2px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;text-align:center;">
+                  <div style="font-size:20px;margin-bottom:4px;">☀️</div>
+                  <div style="font-size:12px;font-weight:600;">Ljust</div>
+                </button>
+                <button type="button" class="theme-btn" data-theme="dark" onclick="setTheme('dark')" style="flex:1;padding:12px;border-radius:10px;border:2px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;text-align:center;">
+                  <div style="font-size:20px;margin-bottom:4px;">🌙</div>
+                  <div style="font-size:12px;font-weight:600;">Mörkt</div>
+                </button>
+                <button type="button" class="theme-btn" data-theme="midnight" onclick="setTheme('midnight')" style="flex:1;padding:12px;border-radius:10px;border:2px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;text-align:center;">
+                  <div style="font-size:20px;margin-bottom:4px;">🌑</div>
+                  <div style="font-size:12px;font-weight:600;">Midnatt</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">LAGER &amp; KATEGORIER</div>
+        <div class="card settings-card">
+          <button class="btn btn-ghost btn-sm" onclick="showScreen('warehouses')">Hantera lager</button>
+          <button class="btn btn-ghost btn-sm" onclick="showScreen('categories')">Hantera kategorier &amp; märken</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">PUSH-NOTISER</div>
+        <div class="card settings-card">
+          <div class="settings-row">
+            <span>Notis vid lågt lager</span>
+            <button id="push-toggle-btn" class="btn btn-sm btn-ghost" onclick="togglePushNotifications()">Aktivera</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="sendTestPush()">Skicka testnotis</button>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">E-POST NOTISER</div>
+        <div class="card settings-card">
+          <div class="settings-row"><span class="muted">Status</span><span id="notif-status-email" style="font-size:13px">Laddar...</span></div>
+          <p style="font-size:12px;color:var(--muted);margin-top:4px">Konfigurera i <code>/opt/elstock/backend/.env</code>:<br>SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, NOTIFY_EMAIL</p>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">TELEGRAM NOTISER</div>
+        <div class="card settings-card">
+          <div class="settings-row"><span class="muted">Status</span><span id="notif-status-telegram" style="font-size:13px">Laddar...</span></div>
+          <p style="font-size:12px;color:var(--muted);margin-top:4px">Konfigurera i <code>.env</code>:<br>TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID</p>
+          <a href="https://t.me/BotFather" target="_blank" class="btn btn-ghost btn-sm" style="margin-top:6px">Skapa Telegram-bot →</a>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">📍 GEOFENCE — AUTOMATISK INKÖPSLISTA</div>
+        <div class="card settings-card">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">När du anländer till centralförrådet skickas en Telegram-notis med alla artiklar som behöver fyllas på.</p>
+          <div id="geofence-settings-content">
+            <button class="btn btn-ghost btn-sm btn-full" onclick="loadGeofenceSettings()">Ladda inställningar</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">🗺️ TEKNIKERKARTA</div>
+        <div class="card settings-card" style="padding:0;overflow:hidden">
+          <div id="technician-map" style="height:300px;border-radius:var(--radius)"></div>
+          <div style="padding:10px">
+            <button class="btn btn-ghost btn-sm btn-full" onclick="loadTechnicianMap()">🔄 Uppdatera</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section admin-only">
+        <div class="settings-label">PUSH (VAPID)</div>
+        <div class="card settings-card">
+          <div class="settings-row"><span class="muted">Status</span><span id="notif-status-push" style="font-size:13px">Laddar...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-trips" class="page-screen hidden">
+      <div class="page-header">
+        <h2>Färdlogg</h2>
+        <button class="btn btn-sm btn-accent" onclick="startTrip()">🚗 Starta resa</button>
+      </div>
+      <div id="active-trip-banner"></div>
+      <div class="settings-section admin-only" id="trips-filter-section">
+        <div class="settings-label">FILTRERA</div>
+        <div class="card settings-card">
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <div class="field" style="flex:1"><label>Från</label><input type="date" id="trips-from"></div>
+            <div class="field" style="flex:1"><label>Till</label><input type="date" id="trips-to"></div>
+          </div>
+          <select id="trips-user-filter" style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px"><option value="">Alla tekniker</option></select>
+          <button class="btn btn-ghost btn-sm btn-full" onclick="exportTripsCSV()">📥 Exportera CSV</button>
+        </div>
+      </div>
+      <div id="trips-list"></div>
+    </div>
+  </div><!-- /screen-app -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div id="modal-scanner" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header"><h3>Skanna streckkod</h3><button class="modal-close" onclick="closeScanner()">✕</button></div>
+    <div id="scanner-container"><video id="scanner-video" autoplay playsinline muted></video><div class="scanner-frame"></div></div>
+    <div id="scanner-status" class="scanner-status">Rikta kameran mot streckkoden</div>
+    <div class="modal-actions">
+      <input type="text" id="manual-barcode" placeholder="Eller skriv E-nummer / streckkod manuellt" class="input-full">
+      <button class="btn btn-primary btn-full" onclick="submitManualBarcode()">Sök</button>
+      <button class="btn btn-ghost btn-full" onclick="closeScanner()">Avbryt</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-product-search" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header"><h3>Sök artikel</h3><button class="modal-close" onclick="closeModal('modal-product-search')">✕</button></div>
+    <input type="search" id="product-search-input" placeholder="Sök på namn eller E-nummer..." oninput="searchProducts(this.value)" class="input-full" autofocus>
+    <div id="product-search-results" class="search-results"></div>
+  </div>
+</div>
+
+<div id="modal-quantity" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header"><h3 id="qty-modal-title">Antal</h3><button class="modal-close" onclick="closeModal('modal-quantity')">✕</button></div>
+    <div class="qty-info" id="qty-modal-info"></div>
+    <div class="qty-controls">
+      <button class="qty-btn" onclick="adjustQty(-1)">−</button>
+      <input type="number" id="qty-input" value="1" min="0.1" step="0.1" class="qty-field">
+      <button class="qty-btn" onclick="adjustQty(1)">+</button>
+    </div>
+    <div class="modal-actions"><button class="btn btn-primary btn-full" onclick="confirmQty()">Lägg till</button></div>
+  </div>
+</div>
+
+<div id="modal-checkout" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header"><h3>Slutför uttag</h3><button class="modal-close" onclick="closeModal('modal-checkout')">✕</button></div>
+    <div id="checkout-job-picker" style="display:none"></div>
+    <div id="checkout-manual-fields">
+      <div class="field"><label>Kund / Adress</label><input type="text" id="checkout-customer" placeholder="Kundens namn"><input type="text" id="checkout-address" placeholder="Adress" style="margin-top:8px"></div>
+      <div class="field"><label>Arbetsnummer / AO</label><input type="text" id="checkout-workorder" placeholder="t.ex. AO-2024-001"></div>
+    </div>
+    <div class="field"><label>Anteckning (valfri)</label><textarea id="checkout-notes" rows="2"></textarea></div>
+    <div id="checkout-items-summary" class="checkout-summary"></div>
+    <button class="btn btn-primary btn-full" onclick="submitCheckout()">Bekräfta &amp; skapa kvitto</button>
+  </div>
+</div>
+
+<div id="modal-receipt" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header"><h3>Kvitto</h3><button class="modal-close" onclick="closeModal('modal-receipt')">✕</button></div>
+    <div id="receipt-content" class="receipt"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-full" onclick="printReceipt()">🖨️ Dela / Skriv ut</button>
+      <button class="btn btn-ghost btn-full" onclick="downloadReceiptPDF()">📄 Ladda ner PDF</button>
+      <button class="btn btn-ghost btn-full" onclick="closeModal('modal-receipt')">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-edit-product" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header"><h3 id="edit-product-title">Ny produkt</h3><button class="modal-close" onclick="closeModal('modal-edit-product')">✕</button></div>
+    <input type="hidden" id="edit-product-id">
+    <div class="image-upload-area" id="image-upload-area" onclick="triggerImageUpload()">
+      <img id="edit-product-img-preview" src="" style="display:none">
+      <div class="upload-hint"><div class="upload-icon">📷</div><div>Tryck för att lägga till bild</div><div style="font-size:11px;margin-top:4px;color:var(--muted)">JPG, PNG — max 5MB</div></div>
+      <div class="image-upload-overlay">
+        <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();changeProductImage()">Byt bild</button>
+        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();removeProductImage()">Ta bort</button>
+      </div>
+    </div>
+    <input type="file" id="image-file-input" accept="image/*" style="display:none" onchange="handleImageFile(this)">
+    <div class="field"><label>E-nummer *</label><input type="text" id="edit-e-number" placeholder="t.ex. 5161234" inputmode="numeric"></div>
+    <div class="field"><label>Namn *</label><input type="text" id="edit-product-name" placeholder="Artikelnamn"></div>
+    <div class="field"><label>Kategori</label><select id="edit-category-id" onchange="onCategoryChange(this.value)"><option value="">-- Välj kategori --</option></select></div>
+    <div class="field"><label>Märke</label><select id="edit-brand"><option value="">-- Välj märke --</option></select></div>
+    <div id="edit-attr-fields" class="attr-grid"></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <div class="field" style="flex:1"><label>Enhet</label><select id="edit-unit"><option value="st">st</option><option value="m">m</option><option value="förp">förp</option><option value="par">par</option><option value="rulle">rulle</option><option value="box">box</option></select></div>
+      <div class="field" style="flex:2"><label>Streckkod (valfri)</label><div style="display:flex;gap:6px"><input type="text" id="edit-barcode" placeholder="EAN/QR" style="flex:1"><button class="btn btn-ghost btn-sm" onclick="openScanModal('edit-barcode-scan')">📷</button></div></div>
+    </div>
+    <div class="field"><label>Beskrivning</label><textarea id="edit-description" rows="2"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveEditProduct()">Spara</button>
+      <button id="delete-product-btn" class="btn btn-danger btn-sm" onclick="deleteProduct()" style="display:none">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-product-detail" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header"><h3 id="detail-product-name">Produkt</h3><button class="modal-close" onclick="closeModal('modal-product-detail')">✕</button></div>
+    <div id="product-detail-content" class="product-detail"></div>
+    <div class="modal-actions">
+      <button class="btn btn-accent btn-full" id="detail-add-to-cart-btn">Lägg i varukorg</button>
+      <button class="btn btn-ghost btn-full admin-only" onclick="editCurrentDetailProduct()">✏️ Redigera produkt</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-add-warehouse" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header"><h3 id="wh-modal-title">Nytt lager</h3><button class="modal-close" onclick="closeModal('modal-add-warehouse')">✕</button></div>
+    <div class="field"><label>Namn *</label><input type="text" id="new-wh-name" placeholder="t.ex. Bil 1, Garage..."></div>
+    <div class="field"><label>Typ</label><select id="new-wh-type"><option value="car">🚐 Bil</option><option value="garage">🏠 Garage</option><option value="warehouse">🏭 Förråd</option><option value="other">📦 Övrigt</option></select></div>
+    <div class="field"><label>Beskrivning (valfri)</label><input type="text" id="new-wh-desc" placeholder=""></div>
+    <button class="btn btn-primary btn-full" id="save-wh-btn" onclick="saveWarehouse()">Spara</button>
+  </div>
+</div>
+
+<div id="modal-edit-user" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header"><h3 id="user-modal-title">Ny användare</h3><button class="modal-close" onclick="closeModal('modal-edit-user')">✕</button></div>
+    <input type="hidden" id="edit-user-id">
+    <div class="field"><label>Namn</label><input type="text" id="edit-user-display" placeholder="Visningsnamn"></div>
+    <div class="field"><label>Användarnamn</label><input type="text" id="edit-user-username" placeholder="användarnamn"></div>
+    <div class="field"><label>Lösenord</label><input type="password" id="edit-user-password" placeholder="Lösenord (min 6 tecken)"></div>
+    <div class="field"><label>Roll</label>
+      <select id="edit-user-role">
+        <option value="user">Användare (standard)</option>
+        <option value="admin">Admin (full åtkomst)</option>
+      </select>
+    </div>
+    <div class="field" id="adminkey-row"><label>Admin-nyckel</label><input type="text" id="edit-user-adminkey" placeholder="Fås från .env → ADMIN_KEY"></div>
+    <button class="btn btn-primary btn-full" onclick="saveUser()">Spara</button>
+    <div id="user-modal-error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<div id="modal-change-pw" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header"><h3>Ändra lösenord</h3><button class="modal-close" onclick="closeModal('modal-change-pw')">✕</button></div>
+    <div class="field"><label>Nuvarande lösenord</label><input type="password" id="pw-current"></div>
+    <div class="field"><label>Nytt lösenord</label><input type="password" id="pw-new"></div>
+    <button class="btn btn-primary btn-full" onclick="changePassword()">Spara</button>
+    <div id="pw-error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<div id="modal-edit-category" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header">
+      <h3 id="cat-modal-title">Ny kategori</h3>
+      <button class="modal-close" onclick="closeModal('modal-edit-category')">✕</button>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:0 0 80px">
+        <label>Ikon</label>
+        <input type="text" id="cat-edit-icon" value="📦" style="font-size:24px;text-align:center;padding:6px">
+      </div>
+      <div class="field" style="flex:1">
+        <label>Namn *</label>
+        <input type="text" id="cat-edit-name" placeholder="Kategorinamn">
+      </div>
+    </div>
+    <div class="field">
+      <label>Vanliga ikoner (tryck för att välja)</label>
+      <div class="icon-grid">
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🔌</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">💡</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">⚡</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🔧</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🔩</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">📦</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🏠</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🛠️</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">⚠️</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🔗</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🔴</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🟡</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🔵</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🟠</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">📡</span>
+        <span class="icon-opt" onclick="document.getElementById('cat-edit-icon').value=this.textContent">🖥️</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Underkategori till (lämna tomt för toppnivå)</label>
+      <select id="cat-edit-parent">
+        <option value="">— Toppnivå —</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="settings-label" style="margin:0">FILTER</div>
+      <button class="btn btn-xs btn-accent" onclick="addFilter()">+ Lägg till filter</button>
+    </div>
+    <div id="cat-filter-list"></div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Filter visas som sökbara alternativ i produktkatalogen. Märke läggs till automatiskt.</p>
+    <button class="btn btn-primary btn-full" onclick="saveCategory()">Spara</button>
+    <div id="cat-modal-error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<div id="modal-job-form" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header">
+      <h3 id="job-modal-title">Nytt jobb</h3>
+      <button class="modal-close" onclick="closeModal('modal-job-form')">✕</button>
+    </div>
+    <input type="hidden" id="job-form-id">
+    <input type="hidden" id="job-form-customer-id">
+    <div class="field"><label>AO-nummer / Ordernummer</label><input type="text" id="job-form-order" placeholder="t.ex. AO-2024-001"></div>
+    <div class="field">
+      <label>Sök befintlig kund</label>
+      <input type="search" id="job-customer-search" placeholder="Sök kundnamn eller kundnummer..." oninput="searchCustomerForJob(this.value)" class="input-full" style="margin-bottom:6px">
+      <div id="job-customer-results"></div>
+    </div>
+    <div class="field"><label>Kundnamn *</label><input type="text" id="job-form-customer" placeholder="Kundens namn (eller välj ovan)"></div>
+    <div class="field"><label>Telefonnummer</label><input type="tel" id="job-form-phone" placeholder="070-123 45 67"></div>
+    <div class="field"><label>Adress</label><input type="text" id="job-form-address" placeholder="Gatuadress, Stad"></div>
+    <div class="field"><label>Beskrivning / Uppdrag</label><textarea id="job-form-desc" rows="3" placeholder="Vad ska göras?"></textarea></div>
+    <div class="field"><label>Deadline / Klart senast</label><input type="date" id="job-form-deadline"></div>
+    <button class="btn btn-primary btn-full" onclick="saveJobForm()">Spara</button>
+  </div>
+</div>
+
+<div id="modal-job-note" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Lägg till anteckning</h3>
+      <button class="modal-close" onclick="closeModal('modal-job-note')">✕</button>
+    </div>
+    <textarea id="note-input" rows="5" placeholder="Skriv din anteckning..." style="width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:12px;font-size:15px;font-family:var(--font);resize:vertical"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-full" onclick="submitNote()">Lägg till</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-job-material" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header">
+      <h3>Lägg till material</h3>
+      <button class="modal-close" onclick="closeModal('modal-job-material')">✕</button>
+    </div>
+    <input type="search" id="job-material-search" placeholder="Sök artikel eller E-nummer..." oninput="searchJobMaterials(this.value)" class="input-full">
+    <div id="job-material-results" class="search-results" style="max-height:40vh"></div>
+    <div id="job-material-selected"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-full" onclick="addJobMaterial()">Lägg till</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-customer-form" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header">
+      <h3 id="customer-modal-title">Ny kund</h3>
+      <button class="modal-close" onclick="closeModal('modal-customer-form')">✕</button>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>Kundnummer</label><input type="text" id="customer-form-number" placeholder="K-0001"></div>
+      <div class="field" style="flex:2"><label>Namn *</label><input type="text" id="customer-form-name" placeholder="För- och efternamn"></div>
+    </div>
+    <input type="hidden" id="customer-form-id">
+    <div class="field"><label>Företag (valfri)</label><input type="text" id="customer-form-company" placeholder="Företagsnamn"></div>
+    <div class="field"><label>Telefon</label><input type="tel" id="customer-form-phone" placeholder="070-123 45 67"></div>
+    <div class="field"><label>E-post</label><input type="email" id="customer-form-email" placeholder="email@exempel.se"></div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:2"><label>Adress</label><input type="text" id="customer-form-address" placeholder="Gatuadress"></div>
+      <div class="field" style="flex:1"><label>Stad</label><input type="text" id="customer-form-city" placeholder="Stad"></div>
+    </div>
+    <div class="field"><label>Anteckningar</label><textarea id="customer-form-notes" rows="2" placeholder="Övrigt..."></textarea></div>
+    <button class="btn btn-primary btn-full" onclick="saveCustomer()">Spara kund</button>
+  </div>
+</div>
+
+<div id="modal-job-booking" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Boka tid</h3>
+      <button class="modal-close" onclick="closeModal('modal-job-booking')">✕</button>
+    </div>
+    <div class="field"><label>Titel *</label><input type="text" id="booking-title" placeholder="t.ex. Startdatum, Återkomst, Besiktning..."></div>
+    <div class="field"><label>Starttid *</label><input type="datetime-local" id="booking-start"></div>
+    <div class="field"><label>Sluttid (valfri)</label><input type="datetime-local" id="booking-end"></div>
+    <div class="field"><label>Anteckning</label><input type="text" id="booking-notes" placeholder="Valfri info"></div>
+    <button class="btn btn-primary btn-full" onclick="saveBooking()">Spara &amp; lägg till i kalender</button>
+  </div>
+</div>
+
+<div id="modal-calendar-event" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header">
+      <h3 id="event-modal-title">Ny händelse</h3>
+      <button class="modal-close" onclick="closeModal('modal-calendar-event')">✕</button>
+    </div>
+    <div class="field"><label>Titel *</label><input type="text" id="event-form-title" placeholder="t.ex. Möte, Installation, Besiktning..."></div>
+    <div class="field"><label>Beskrivning</label><input type="text" id="event-form-desc" placeholder="Valfri info"></div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>Datum *</label><input type="date" id="event-form-date"></div>
+      <div class="field" style="flex:1"><label>Kopplat jobb</label>
+        <select id="event-form-job"><option value="">— Inget —</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="event-form-allday"> Heldag
+      </label>
+    </div>
+    <div id="event-time-fields" style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>Starttid</label><input type="time" id="event-form-time" value="08:00"></div>
+      <div class="field" style="flex:1"><label>Sluttid</label><input type="time" id="event-form-endtime" value="09:00"></div>
+    </div>
+    <div class="field">
+      <label>Påminnelse</label>
+      <select id="event-form-reminder">
+        <option value="15">15 minuter innan</option>
+        <option value="30">30 minuter innan</option>
+        <option value="60" selected>1 timme innan</option>
+        <option value="120">2 timmar innan</option>
+        <option value="1440">1 dag innan</option>
+        <option value="0">Ingen påminnelse</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Färg</label>
+      <div id="event-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px"></div>
+      <input type="hidden" id="event-form-color" value="#f5a623">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveCalEvent()">Spara</button>
+      <button id="event-delete-btn" class="btn btn-danger btn-sm" onclick="deleteCalEvent(editingEventId)" style="display:none">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-edit-permissions" class="modal-overlay hidden">
+  <div class="modal modal-tall">
+    <div class="modal-header">
+      <h3 id="perm-modal-title">Redigera behörigheter</h3>
+      <button class="modal-close" onclick="closeModal('modal-edit-permissions')">✕</button>
+    </div>
+    <input type="hidden" id="perm-user-id">
+    <div class="field"><label>Visningsnamn</label><input type="text" id="perm-display-name"></div>
+    <div class="field"><label>Roll</label>
+      <select id="perm-role">
+        <option value="user">👤 Användare</option>
+        <option value="admin">👑 Admin</option>
+      </select>
+    </div>
+    <div style="background:var(--card2);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px">📱 Telegram (personlig)</div>
+      <div class="field"><label>Chat ID</label><input type="text" id="perm-telegram-id" placeholder="Hämtas via @userinfobot på Telegram"></div>
+      <div class="field"><label>Visningsnamn</label><input type="text" id="perm-telegram-user" placeholder="@användarnamn"></div>
+    </div>
+    <div class="settings-row" style="margin-bottom:10px"><span>Notis vid lågt lager</span><input type="checkbox" id="perm-notify-low"></div>
+    <div class="settings-row" style="margin-bottom:10px"><span>Push-notiser</span><input type="checkbox" id="perm-push"></div>
+    <div class="field"><label>Färg</label><input type="color" id="perm-color" value="#f5a623" style="width:60px;height:36px;border:none;background:none;cursor:pointer"></div>
+    <div class="field"><label>Nytt lösenord (lämna tomt = behåll)</label><input type="password" id="perm-password" placeholder="Min 6 tecken"></div>
+    <button class="btn btn-primary btn-full" onclick="saveUserPermissions()">Spara</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- Voice Assistant FAB -->
+<button class="assistant-fab" onclick="openAssistant()" title="Röstassistent">🎙️</button>
+
+<script src="/js/lib/leaflet.js"></script>
+<script src="/js/lib/zxing.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/scanner.js"></script>
+<script src="/js/catalog.js"></script>
+<script src="/js/categories-admin.js"></script>
+<script src="/js/customers.js"></script>
+<script src="/js/jobs.js"></script>
+<script src="/js/calendar.js"></script>
+<script src="/js/assistant.js"></script>
+<script src="/js/permissions.js"></script>
+<script src="/js/equipment.js"></script>
+<script src="/js/trips.js"></script>
+<script src="/js/settings.js"></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   TEMA-HANTERING — sparas till databas + localStorage
+   ═══════════════════════════════════════════════════════════════════════ */
+function initTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    const active = btn.dataset.theme === current;
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.background = active ? 'var(--accent-dim)' : 'var(--card)';
+    btn.style.color = active ? 'var(--accent)' : 'var(--text)';
+  });
+}
+function setTheme(themeName) {
+  document.documentElement.setAttribute('data-theme', themeName);
+  localStorage.setItem('theme', themeName);
+  initTheme();
+  const token = localStorage.getItem('token');
+  if (token) {
+    fetch('/api/user-settings/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ theme: themeName })
+    }).catch(() => {});
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  initTheme();
+  const token = localStorage.getItem('token');
+  if (token) {
+    fetch('/api/user-settings/profile', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(r => r.ok ? r.json() : null)
+    .then(profile => {
+      if (profile && profile.theme) {
+        document.documentElement.setAttribute('data-theme', profile.theme);
+        localStorage.setItem('theme', profile.theme);
+        initTheme();
+      }
+    }).catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
