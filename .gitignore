@@ -1,8 +1,16 @@
 # === KÄNSLIG DATA ===
+# OBS: bara den riktiga .env-filen ska ignoreras – INTE .env.example.
+# Tidigare stod det ".env.*" här, vilket även fångade .env.example
+# och gjorde att den aldrig blev committad. Var försiktig om du lägger
+# till fler .env.*-varianter i framtiden; whitelista dem explicit nedan.
 .env
-.env.*
-*.env
-backend/config.js
+.env.local
+.env.production
+!.env.example
+
+# backend/config.js läser bara från process.env och innehåller inga
+# hemligheter – den SKA committas så att `npm start` fungerar direkt
+# efter klon. De faktiska hemligheterna bor i .env, inte här.
 *.db
 *.db-shm
 *.db-wal
@@ -18,11 +26,15 @@ backup.sh
 fix.sh
 *.backup
 
+# === EDITOR / SYSTEM ===
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
 # === NODE ===
 node_modules/
 npm-debug.log*
-package-lock.json
-
-# === SYSTEM ===
-.DS_Store
-Thumbs.db
+# package-lock.json committas MEDVETET (togs bort från denna lista) –
+# den ska följa med i git för reproducerbara installationer.

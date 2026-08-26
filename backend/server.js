@@ -14,7 +14,11 @@ const PORT = config.port;
 const UPLOAD_DIR = config.uploadDir;
 
 app.use(cors({ origin: config.corsOrigin }));
-app.use(express.json({ limit: '10mb' }));
+// OBS: uploads.js tillåter base64-bilder upp till 20MB rådata. Base64 gör
+// payloaden ~33% större, så gränsen här måste vara högre än så, annars
+// avvisas stora uppladdningar redan här (som ett generiskt 413-fel) innan
+// uploads.js egen, tydligare felmeddelande-kontroll ens hinner köra.
+app.use(express.json({ limit: '27mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
